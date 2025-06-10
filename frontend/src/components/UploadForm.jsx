@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -12,18 +12,39 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 
-const API_BASE = 'https://whisper-api.shape-z.de';
+const API_BASE = `https://${import.meta.env.VITE_WHISPER_API_DOMAIN}`;
 
 export default function UploadForm({ onDone }) {
-  const [file,    setFile]    = useState(null);
-  const [model,   setModel]   = useState('fast');
-  const [alias,   setAlias]   = useState('');
+  const [file, setFile] = useState(null);
+  const [model, setModel] = useState('');
+  const [alias, setAlias] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [progress,  setProgress]  = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [availableModels, setAvailableModels] = useState([]);
+
+  // Verfügbare Modelle beim Laden abrufen
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/models`);
+        const loadedModels = response.data.models.filter(m => m.loaded);
+        setAvailableModels(loadedModels);
+        
+        // Erstes verfügbares Modell als Standard setzen
+        if (loadedModels.length > 0 && !model) {
+          setModel(loadedModels[0].value);
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Modelle:', error);
+      }
+    };
+
+    fetchModels();
+  }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !model) return;
     setUploading(true);
     const form = new FormData();
     form.append('file', file);
@@ -56,24 +77,29 @@ export default function UploadForm({ onDone }) {
         />
       </Button>
       {file && <Typography>Ausgewählt: {file.name}</Typography>}
+      
       <FormControl fullWidth>
-        <InputLabel id="model-label">Modus</InputLabel>
+        <InputLabel id="model-label">Modell</InputLabel>
         <Select
           labelId="model-label"
           value={model}
-          label="Modus"
+          label="Modell"
           onChange={e => setModel(e.target.value)}
         >
-          <MenuItem value="fast">Schnell</MenuItem>
-          <MenuItem value="accurate">Präzise</MenuItem>
+          {availableModels.map(modelOption => (
+            <MenuItem key={modelOption.value} value={modelOption.value}>
+              {modelOption.label}
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
+      
       <TextField
         label="Alias (optional)"
         value={alias}
         onChange={e => setAlias(e.target.value)}
       />
-      <Button type="submit" variant="contained" disabled={uploading}>
+      <Button type="submit" variant="contained" disabled={uploading || !model}>
         Transkription starten
       </Button>
       {uploading && <LinearProgress variant="determinate" value={progress * 100} />}

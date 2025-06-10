@@ -6,26 +6,31 @@ services:
       - web
     volumes:
       - whisper_data:/app/data
-    # Exponieren des Ports intern (Traefik nutzt den Service-Port, kein direkter Host-Port nötig)
     environment:
       - CUDA_AVAILABLE=0
-      - REGISTRATION_KEY=12345
+      - REGISTRATION_KEY=${REGISTRATION_KEY}
+      - WHISPER_WEB_DOMAIN=${WHISPER_WEB_DOMAIN}
+      - WHISPER_MODELS=${WHISPER_MODELS}
+      - WHISPER_MODEL_LABELS=${WHISPER_MODEL_LABELS}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whisper-api.rule=Host(`whisper-api.shape-z.de`)"
+      - "traefik.http.routers.whisper-api.rule=Host(`${WHISPER_API_DOMAIN}`)"
       - "traefik.http.routers.whisper-api.entrypoints=websecure"
       - "traefik.http.routers.whisper-api.tls=true"
       - "traefik.http.routers.whisper-api.tls.certresolver=lets-encrypt"
       - "traefik.http.services.whisper-api.loadbalancer.server.port=5000"
 
   whisper-web:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - VITE_WHISPER_API_DOMAIN=${WHISPER_API_DOMAIN}
     container_name: whisper_web
     networks:
       - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.whisper-web.rule=Host(`whisper.shape-z.de`)"
+      - "traefik.http.routers.whisper-web.rule=Host(`${WHISPER_WEB_DOMAIN}`)"
       - "traefik.http.routers.whisper-web.middlewares=security@file"
       - "traefik.http.routers.whisper-web.tls=true"
       - "traefik.http.routers.whisper-web.tls.certresolver=lets-encrypt"
@@ -38,5 +43,4 @@ networks:
 
 volumes:
   whisper_data:
-
 

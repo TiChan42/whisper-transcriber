@@ -13,7 +13,7 @@ import UploadForm     from './components/UploadForm.jsx';
 import JobTable       from './components/JobTable.jsx';
 import TranscriptDialog from './components/TranscriptDialog.jsx';
 
-const API_BASE = 'https://whisper-api.shape-z.de';
+const API_BASE = `https://${import.meta.env.VITE_WHISPER_API_DOMAIN}`;
 
 export default function App() {
   // Auth-State

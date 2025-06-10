@@ -4,6 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# Umgebungsvariablen für Vite verfügbar machen
+ARG VITE_WHISPER_API_DOMAIN
+ENV VITE_WHISPER_API_DOMAIN=${VITE_WHISPER_API_DOMAIN}
 RUN npm run build
 
 # Production-Stage

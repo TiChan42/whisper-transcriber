@@ -1,4 +1,4 @@
-import os, shutil, sqlite3, secrets
+import os, shutil, sqlite3, secrets, json
 from datetime import datetime
 from fastapi import (
     FastAPI, File, UploadFile, Form, BackgroundTasks,
@@ -12,15 +12,24 @@ from faster_whisper import WhisperModel
 import config
 
 # ——— Konfiguration ———
-DB_PATH                = "data/whisper_jobs.db"
-FAST_MODEL_NAME        = "tiny"
-ACCURATE_MODEL_NAME    = "small"
-DEVICE                 = "cuda" if os.environ.get("CUDA_AVAILABLE") == "1" else "cpu"
-FAST_MODEL_COMPUTE     = "int8" if DEVICE == "cpu" else "float16"
-ACCURATE_MODEL_COMPUTE = "int8" if DEVICE == "cpu" else "float16"
+DB_PATH = "data/whisper_jobs.db"
+
+# Dynamische Modell-Konfiguration aus Umgebungsvariablen
+WHISPER_MODELS_STR = os.environ.get("WHISPER_MODELS")
+WHISPER_MODEL_LABELS_STR = os.environ.get("WHISPER_MODEL_LABELS")
+
+AVAILABLE_MODELS = WHISPER_MODELS_STR.split(",")
+MODEL_LABELS = WHISPER_MODEL_LABELS_STR.split(",")
+
+# Fallback falls Labels nicht genug sind
+while len(MODEL_LABELS) < len(AVAILABLE_MODELS):
+    MODEL_LABELS.append(f"Modell {len(MODEL_LABELS) + 1}")
+
+DEVICE = "cuda" if os.environ.get("CUDA_AVAILABLE") == "1" else "cpu"
+COMPUTE_TYPE = "int8" if DEVICE == "cpu" else "float16"
 
 # ——— Security / Hashing ———
-pwd_context   = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def get_current_user(api_key: str = Security(api_key_scheme)):
@@ -40,7 +49,7 @@ def get_current_user(api_key: str = Security(api_key_scheme)):
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://whisper.shape-z.de"],
+    allow_origins=[f"https://{os.environ.get('WHISPER_WEB_DOMAIN')}"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,16 +99,25 @@ if "api_key_plain" not in user_cols:
 conn.commit()
 conn.close()
 
-# ——— Whisper-Modelle laden ———
-print(f"Lade schnelles Modell '{FAST_MODEL_NAME}' auf {DEVICE} …")
-model_fast     = WhisperModel(FAST_MODEL_NAME,     device=DEVICE, compute_type=FAST_MODEL_COMPUTE)
-print(f"Lade präzises Modell '{ACCURATE_MODEL_NAME}' auf {DEVICE} …")
-model_accurate = WhisperModel(ACCURATE_MODEL_NAME, device=DEVICE, compute_type=ACCURATE_MODEL_COMPUTE)
-print("Modelle geladen.")
+# ——— Whisper-Modelle dynamisch laden ———
+loaded_models = {}
+print(f"Lade Whisper-Modelle auf {DEVICE} mit {COMPUTE_TYPE}...")
+for model_name in AVAILABLE_MODELS:
+    print(f"  Lade Modell '{model_name}'...")
+    try:
+        loaded_models[model_name] = WhisperModel(model_name, device=DEVICE, compute_type=COMPUTE_TYPE)
+        print(f"  ✓ Modell '{model_name}' erfolgreich geladen")
+    except Exception as e:
+        print(f"  ✗ Fehler beim Laden von '{model_name}': {e}")
+        
+print(f"Verfügbare Modelle: {list(loaded_models.keys())}")
 
 def transcribe_file(filepath: str, model_choice: str) -> str:
-    m = model_fast if model_choice == "fast" else model_accurate
-    segments, _ = m.transcribe(filepath)
+    if model_choice not in loaded_models:
+        raise ValueError(f"Modell '{model_choice}' nicht verfügbar")
+    
+    model = loaded_models[model_choice]
+    segments, _ = model.transcribe(filepath)
     return "".join(s.text for s in segments)
 
 def process_job(job_id: int, file_path: str, model_choice: str, user_id: int):
@@ -353,3 +371,23 @@ async def transcribe_sync(
     try: os.remove(tmp)
     except: pass
     return {"text": text}
+
+# ——— Neue Endpoint für verfügbare Modelle ———
+@app.get("/models")
+def get_available_models():
+    """Liefert verfügbare Modelle und ihre Labels zurück."""
+    models = []
+    for i, model_name in enumerate(AVAILABLE_MODELS):
+        if model_name in loaded_models:
+            models.append({
+                "value": model_name,
+                "label": MODEL_LABELS[i] if i < len(MODEL_LABELS) else model_name,
+                "loaded": True
+            })
+        else:
+            models.append({
+                "value": model_name,
+                "label": MODEL_LABELS[i] if i < len(MODEL_LABELS) else model_name,
+                "loaded": False
+            })
+    return {"models": models}
