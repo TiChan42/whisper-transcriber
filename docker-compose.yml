@@ -12,6 +12,7 @@ services:
       - WHISPER_WEB_DOMAIN=${WHISPER_WEB_DOMAIN}
       - WHISPER_MODELS=${WHISPER_MODELS}
       - WHISPER_MODEL_LABELS=${WHISPER_MODEL_LABELS}
+      - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-500}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.whisper-api.rule=Host(`${WHISPER_API_DOMAIN}`)"
@@ -25,6 +26,7 @@ services:
       context: ./frontend
       args:
         - VITE_WHISPER_API_DOMAIN=${WHISPER_API_DOMAIN}
+        - VITE_MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-500}
     container_name: whisper_web
     networks:
       - web

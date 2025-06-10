@@ -6,7 +6,9 @@ RUN npm install
 COPY . .
 # Umgebungsvariablen für Vite verfügbar machen
 ARG VITE_WHISPER_API_DOMAIN
+ARG VITE_MAX_UPLOAD_SIZE_MB
 ENV VITE_WHISPER_API_DOMAIN=${VITE_WHISPER_API_DOMAIN}
+ENV VITE_MAX_UPLOAD_SIZE_MB=${VITE_MAX_UPLOAD_SIZE_MB}
 RUN npm run build
 
 # Production-Stage

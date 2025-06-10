@@ -103,6 +103,37 @@ docker compose up -d
 
 ## Konfiguration
 
+### Upload-Beschränkungen
+
+Die maximale Upload-Dateigröße kann über Umgebungsvariablen konfiguriert werden:
+
+```bash
+# Maximale Upload-Größe in Megabytes (Standard: 500 MB)
+MAX_UPLOAD_SIZE_MB=1000
+```
+
+**Beispiel-Konfigurationen:**
+
+```bash
+# Für kleine Server (begrenzte Ressourcen)
+MAX_UPLOAD_SIZE_MB=100
+
+# Standard-Konfiguration
+MAX_UPLOAD_SIZE_MB=500
+
+# Für leistungsstarke Server
+MAX_UPLOAD_SIZE_MB=2000
+
+# Für Enterprise-Umgebungen
+MAX_UPLOAD_SIZE_MB=5000
+```
+
+**Wichtige Hinweise:**
+- Größere Dateien benötigen mehr RAM und Verarbeitungszeit
+- Berücksichtigen Sie verfügbare Speicherkapazität und Netzwerk-Bandbreite
+- Das System validiert die Dateigröße sowohl im Frontend als auch Backend
+- Änderungen erfordern einen Container-Neustart
+
 ### Whisper-Modelle
 
 Die verfügbaren Modelle werden über Umgebungsvariablen in der [`.env`](.env) Datei konfiguriert:
@@ -117,41 +148,52 @@ WHISPER_MODEL_LABELS=Schnell,Standard,Präzise,Exakt
 
 **Verfügbare Whisper-Modelle:**
 
-| Modell | Größe | VRAM | Geschwindigkeit | Genauigkeit |
-|--------|-------|------|----------------|-------------|
-| `tiny` | 39 MB | ~1 GB | Sehr schnell | Grundlegend |
-| `base` | 74 MB | ~1 GB | Schnell | Gut |
-| `small` | 244 MB | ~2 GB | Mittel | Sehr gut |
-| `medium` | 769 MB | ~5 GB | Langsam | Hoch |
-| `large-v2` | 1550 MB | ~10 GB | Sehr langsam | Sehr hoch |
-| `large-v3` | 1550 MB | ~10 GB | Sehr langsam | Höchste |
+| Modell | Größe | VRAM | Upload-Empfehlung | Geschwindigkeit | Genauigkeit |
+|--------|-------|------|-------------------|----------------|-------------|
+| `tiny` | 39 MB | ~1 GB | bis 100 MB | Sehr schnell | Grundlegend |
+| `base` | 74 MB | ~1 GB | bis 250 MB | Schnell | Gut |
+| `small` | 244 MB | ~2 GB | bis 500 MB | Mittel | Sehr gut |
+| `medium` | 769 MB | ~5 GB | bis 1 GB | Langsam | Hoch |
+| `large-v2` | 1550 MB | ~10 GB | bis 2 GB | Sehr langsam | Sehr hoch |
+| `large-v3` | 1550 MB | ~10 GB | bis 5 GB | Sehr langsam | Höchste |
 
-**Beispiel-Konfigurationen:**
+**Empfohlene Kombinationen:**
 
 ```bash
-# Nur schnelle Modelle für begrenzte Ressourcen
+# Für kleine Server (4 GB RAM)
 WHISPER_MODELS=tiny,base
-WHISPER_MODEL_LABELS=Schnell,Standard
+MAX_UPLOAD_SIZE_MB=100
 
-# Ausgewogene Auswahl
-WHISPER_MODELS=tiny,small,medium
-WHISPER_MODEL_LABELS=Schnell,Gut,Präzise
+# Standard-Server (8 GB RAM)
+WHISPER_MODELS=tiny,base,small
+MAX_UPLOAD_SIZE_MB=500
 
-# Alle Modelle für maximale Flexibilität
-WHISPER_MODELS=tiny,base,small,medium,large-v3
-WHISPER_MODEL_LABELS=Sehr schnell,Schnell,Standard,Präzise,Höchste Qualität
+# Leistungsstarke Server (16 GB RAM)
+WHISPER_MODELS=base,small,medium
+MAX_UPLOAD_SIZE_MB=1000
 
-# GPU-optimierte Konfiguration
+# GPU-Server (24+ GB VRAM)
 WHISPER_MODELS=small,medium,large-v3
-WHISPER_MODEL_LABELS=Standard,Präzise,Premium
+MAX_UPLOAD_SIZE_MB=2000
 ```
 
-**Wichtige Hinweise:**
-- Die Modelle werden beim Container-Start heruntergeladen und geladen
-- Größere Modelle benötigen mehr RAM und Speicherplatz
-- Die Labels werden in der gleichen Reihenfolge wie die Modelle verwendet
-- Bei GPU-Nutzung können größere Modelle effizienter verarbeitet werden
-- Änderungen an den Modellen erfordern einen Container-Neustart
+### Vollständige .env Beispiel
+
+```bash
+# Sicherheit
+REGISTRATION_KEY=ihr_sicherer_schluessel_hier
+
+# Domains
+WHISPER_API_DOMAIN=transcribe-api.yourdomain.com
+WHISPER_WEB_DOMAIN=transcribe.yourdomain.com
+
+# Whisper-Modelle
+WHISPER_MODELS=tiny,base,small,medium
+WHISPER_MODEL_LABELS=Schnell,Standard,Gut,Präzise
+
+# Upload-Limits
+MAX_UPLOAD_SIZE_MB=500
+```
 
 ### GPU-Unterstützung
 
@@ -237,16 +279,24 @@ docker compose restart
 
 ## System-Anforderungen
 
-### Minimum
-- 4 GB RAM
-- 2 CPU Cores
-- 10 GB Speicher
+### Abhängig von Upload-Größe und Modellen
 
-### Empfohlen
-- 8 GB RAM
-- 4 CPU Cores
-- 50 GB Speicher
-- NVIDIA GPU (optional)
+| Konfiguration | RAM | Storage | Upload-Limit | Modelle |
+|---------------|-----|---------|--------------|---------|
+| **Klein** | 4 GB | 20 GB | 100 MB | tiny, base |
+| **Standard** | 8 GB | 50 GB | 500 MB | tiny, base, small |
+| **Groß** | 16 GB | 100 GB | 1 GB | base, small, medium |
+| **Enterprise** | 32 GB | 200 GB | 2 GB | small, medium, large |
+
+### Speicherplatz-Berechnung
+
+```bash
+# Grobe Schätzung für temporären Speicher
+Benötigter Speicher = (MAX_UPLOAD_SIZE_MB * gleichzeitige_Jobs * 2) + Modell_Größen
+
+# Beispiel für 500 MB Limit, 3 Jobs, medium Modell:
+Speicherbedarf = (500 MB * 3 * 2) + 769 MB = ~3,8 GB
+```
 
 ## Unterstützte Audio-Formate
 

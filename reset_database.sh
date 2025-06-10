@@ -23,6 +23,6 @@ docker compose down
 echo "💾 Volume wird gelöscht..."
 docker volume rm ${PROJECT_DIR}_whisper_data 2>/dev/null || true
 
-echo "✅ Volume wurde komplett gelöscht!"
+echo " Volume wurde komplett gelöscht!"
 echo "💡 Beim nächsten Start wird eine neue Datenbank erstellt."
 echo "🚀 Container wieder starten mit: docker compose up -d"
