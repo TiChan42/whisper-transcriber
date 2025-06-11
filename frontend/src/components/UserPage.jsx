@@ -51,13 +51,15 @@ import {
   Language,
   Close,
   ModelTraining,
-  FileDownload
+  FileDownload,
+  DeleteForever,
+  Warning
 } from '@mui/icons-material';
 import axios from 'axios';
 
 const API_BASE = `https://${import.meta.env.VITE_WHISPER_API_DOMAIN}`;
 
-export default function UserPage({ username, apiKey }) {
+export default function UserPage({ username, apiKey, onAccountDeleted }) {
   const [showApiKey, setShowApiKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [codeDialogOpen, setCodeDialogOpen] = useState(false);
@@ -69,6 +71,11 @@ export default function UserPage({ username, apiKey }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // ✅ Konto löschen
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  
   // ✅ API-Dokumentation laden
   useEffect(() => {
     fetchApiDocs();
@@ -211,6 +218,29 @@ export default function UserPage({ username, apiKey }) {
     setCodeDialogOpen(true);
   };
 
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError('');
+    
+    try {
+      await axios.delete(`${API_BASE}/user/delete`);
+      
+      // Account wurde gelöscht - Parent-Komponente benachrichtigen
+      if (onAccountDeleted) {
+        onAccountDeleted();
+      }
+      
+    } catch (error) {
+      console.error('Fehler beim Löschen des Kontos:', error);
+      setDeleteError(
+        error.response?.data?.detail || 
+        'Fehler beim Löschen des Kontos. Bitte versuchen Sie es später erneut.'
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // Icon Mapping
   const getIconForEndpoint = (iconName) => {
     const iconMap = {
@@ -285,6 +315,96 @@ export default function UserPage({ username, apiKey }) {
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setCodeDialogOpen(false)}>Schließen</Button>
+      </DialogActions>
+    </Dialog>
+  );
+
+  const DeleteAccountDialog = () => (
+    <Dialog
+      open={deleteDialogOpen}
+      onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Warning color="error" />
+          <Typography variant="h6" color="error">
+            Konto löschen
+          </Typography>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            <strong>Achtung: Diese Aktion kann nicht rückgängig gemacht werden!</strong>
+          </Typography>
+          <Typography variant="body2">
+            Wenn Sie Ihr Konto löschen, werden folgende Daten unwiderruflich entfernt:
+          </Typography>
+        </Alert>
+        
+        <List dense>
+          <ListItem>
+            <ListItemIcon>
+              <DeleteForever color="error" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Ihr Benutzerkonto"
+              secondary="Benutzername und Anmeldedaten"
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemIcon>
+              <History color="error" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Alle Transkriptionsjobs"
+              secondary="Inklusive Verlauf und Ergebnisse"
+            />
+          </ListItem>
+          <ListItem>
+            <ListItemIcon>
+              <Key color="error" />
+            </ListItemIcon>
+            <ListItemText 
+              primary="API-Zugangsschlüssel"
+              secondary="Alle API-Integrationen werden deaktiviert"
+            />
+          </ListItem>
+        </List>
+        
+        <Alert severity="info" sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            <strong>Alternative:</strong> Sie können auch einfach aufhören, den Dienst zu nutzen. 
+            Ihre Daten bleiben dann inaktiv gespeichert.
+          </Typography>
+        </Alert>
+        
+        {deleteError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {deleteError}
+          </Alert>
+        )}
+      </DialogContent>
+      
+      <DialogActions sx={{ p: 3 }}>
+        <Button
+          onClick={() => setDeleteDialogOpen(false)}
+          disabled={deleteLoading}
+        >
+          Abbrechen
+        </Button>
+        <Button
+          onClick={handleDeleteAccount}
+          color="error"
+          variant="contained"
+          disabled={deleteLoading}
+          startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteForever />}
+        >
+          {deleteLoading ? 'Wird gelöscht...' : 'Konto endgültig löschen'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -371,6 +491,28 @@ export default function UserPage({ username, apiKey }) {
                   />
                 </ListItem>
               </List>
+
+              {/* ✅ Konto-Verwaltung Section hinzufügen */}
+              <Divider sx={{ my: 2 }} />
+              
+              <Box>
+                <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'error.main' }}>
+                  Konto-Verwaltung
+                </Typography>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<DeleteForever />}
+                  onClick={() => setDeleteDialogOpen(true)}
+                  sx={{ mt: 1 }}
+                >
+                  Konto löschen
+                </Button>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                  Löscht Ihr Konto und alle zugehörigen Daten permanent
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -579,6 +721,7 @@ export default function UserPage({ username, apiKey }) {
         </Grid>
       </Grid>
 
+      <DeleteAccountDialog />
       <CodeExampleDialog />
     </Box>
   );

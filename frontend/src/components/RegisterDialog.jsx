@@ -83,15 +83,11 @@ export default function RegisterDialog({ open, onClose, onSuccess }) {
     setError('');
 
     try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('reg_key', registrationKey);
-
-      const response = await axios.post(`${API_BASE}/register`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      // JSON statt FormData verwenden
+      const response = await axios.post(`${API_BASE}/register`, {
+        username,
+        password,
+        reg_key: registrationKey
       });
 
       onSuccess({

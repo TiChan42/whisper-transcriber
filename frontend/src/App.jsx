@@ -105,7 +105,23 @@ export default function App() {
     setApiKey('');
     localStorage.removeItem('username');
     localStorage.removeItem('apiKey');
+    axios.defaults.headers.common['X-API-Key'] = '';
     setAnchorEl(null);
+  };
+
+  // ✅ Neue Funktion für Account-Löschung hinzufügen
+  const handleAccountDeleted = () => {
+    // Benutzer ausloggen und zur Startseite weiterleiten
+    setUsername('');
+    setApiKey('');
+    localStorage.removeItem('username');
+    localStorage.removeItem('apiKey');
+    axios.defaults.headers.common['X-API-Key'] = '';
+    setAnchorEl(null);
+    setActiveView('upload');
+    
+    // Optional: Erfolgsbenachrichtigung anzeigen
+    alert('Ihr Konto wurde erfolgreich gelöscht.');
   };
 
   const handleRowClick = async (jobId) => {
@@ -406,7 +422,11 @@ export default function App() {
                   <Typography variant="h5" gutterBottom>
                     Profil & API-Zugang
                   </Typography>
-                  <UserPage username={username} apiKey={apiKey} />
+                  <UserPage 
+                    username={username} 
+                    apiKey={apiKey} 
+                    onAccountDeleted={handleAccountDeleted}
+                  />
                 </CardContent>
               </Card>
             )}

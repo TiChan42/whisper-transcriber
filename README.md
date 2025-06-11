@@ -83,6 +83,7 @@ docker compose up -d
 |----------|--------|--------------|
 | `/register` | POST | Benutzer registrieren |
 | `/login` | POST | Benutzer anmelden |
+| `/user/delete` | DELETE | Eigenes Konto löschen |
 
 ### Job-Management
 
@@ -319,3 +320,20 @@ MIT License - siehe [LICENSE](LICENSE) für Details.
 ## Support
 
 Bei Problemen erstellen Sie ein Issue im Repository oder kontaktieren Sie den Maintainer.
+
+## Konto-Verwaltung
+
+### Konto löschen
+
+Benutzer können ihr Konto über das Frontend-Profil oder direkt über die API löschen:
+
+```bash
+curl -X DELETE "https://your-api-domain/user/delete" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+**Wichtige Hinweise:**
+- Das Löschen eines Kontos ist **unwiderruflich**
+- Alle zugehörigen Transkriptionsjobs werden ebenfalls gelöscht
+- Der API-Key wird sofort ungültig
+- Es erfolgt eine Sicherheitsabfrage im Frontend

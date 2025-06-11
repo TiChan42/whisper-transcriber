@@ -1,0 +1,21 @@
+#Beschreibung
+#Hier Hier wird kurz in einem Kommentar die allgemeine Funktion der in der Datei enthaltenen Endpunkte beschrieben.
+
+
+# Abhängigkeiten
+#Imports und Abhängigkeiten, die für die Endpunkte und Logik benötigt werden
+
+
+# Endpunkte 
+#Relativ kurz: Die Logik findet in der Logik Sektion statt, die Endpunkte sind nur für die Routen zuständig.
+#Jeder Endpunkt bekommt noch einen Beschreibungskommentar, der die Funktion des Endpunktes beschreibt.
+
+
+# rückgabe für die API-Doku
+#gibt ein JSON-Objekt zurück, das die Struktur der API beschreibt, für die Dynamische API-Dokumentation
+
+
+#Logik
+# Hier wird die Logik für die Endpunkte implementiert
+
+
